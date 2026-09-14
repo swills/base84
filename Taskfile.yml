@@ -1,0 +1,54 @@
+version: "3"
+
+tasks:
+  default:
+    desc: Lint, test, and build the project
+    cmds:
+      - task: lint
+      - task: test
+      - task: build
+
+  fmt:
+    desc: Format all Go source files
+    cmds:
+      - golangci-lint fmt
+
+  lint:
+    desc: Lint the project
+    cmds:
+      - golangci-lint run
+
+  test:
+    desc: Run the test suite with race detection
+    cmds:
+      - go test -race -shuffle=on -count=1 ./...
+
+  cover:
+    desc: Run tests and report coverage
+    cmds:
+      - go test -race -shuffle=on -count=1 -coverprofile=coverage.out ./...
+      - go tool cover -func=coverage.out
+
+  build:
+    desc: Build the command-line binary
+    vars:
+      VERSION:
+        sh: printf '%s' "${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || printf devel)}"
+    cmds:
+      - go build -ldflags "-s -w -X main.version={{.VERSION}}" -o base84 ./cmd/base84
+
+  bench:
+    desc: Run Go encode and decode benchmarks
+    cmds:
+      - GOMAXPROCS=1 go test -run '^$' -bench '^Benchmark(Encode|Decode)(Allocate|Reuse)$' -benchmem -benchtime=500ms -count=5 .
+
+  bench-zig:
+    desc: Run fixed-buffer Zig benchmarks
+    vars:
+      ZIG_BASE84_ROOT:
+        sh: 'printf %s "${ZIG_BASE84_ROOT:-../zig-base84}"'
+    preconditions:
+      - sh: test -f "{{.ZIG_BASE84_ROOT}}/src/root.zig"
+        msg: Zig Base84 root.zig not found. Set ZIG_BASE84_ROOT to the zig-base84 checkout.
+    cmds:
+      - zig run -O ReleaseFast --dep base84 -Mroot=benchmark/zig_base84.zig -Mbase84="{{.ZIG_BASE84_ROOT}}/src/root.zig" --cache-dir .zig-cache

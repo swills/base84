@@ -1,0 +1,309 @@
+version: "2"
+
+linters:
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - cyclop
+    - decorder
+    - dogsled
+    - dupword
+    - durationcheck
+    - err113
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecknoinits
+    - gochecksumtype
+    - gocognit
+    - gocritic
+    - gocyclo
+    - goheader
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - grouper
+    - iface
+    - importas
+    - inamedparam
+    - interfacebloat
+    - ireturn
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    - modernize
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - nlreturn
+    - noctx
+    - noinlineerr
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - tagalign
+    - testableexamples
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
+    - wsl_v5
+    - zerologlint
+  exclusions:
+    rules:
+      - path: main.go
+        linters:
+          - forbidigo
+      - path: _test\.go
+        linters:
+          - cyclop
+          - dupl
+          - dupword
+          - err113
+          - errcheck
+          - forbidigo
+          - forcetypeassert
+          - funlen
+          - gocognit
+          - gocyclo
+          - gosec
+          - lll
+          - maintidx
+          - musttag
+          - wrapcheck
+  settings:
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+      allow-unused: false
+    cyclop:
+      max-complexity: 15
+    funlen:
+      statements: 50
+      lines: 75
+    gocritic:
+      enable-all: true
+      disabled-checks:
+         - paramTypeCombine
+    govet:
+      enable-all: true
+      enable:
+        - appends
+        - asmdecl
+        - assign
+        - atomic
+        - atomicalign
+        - bools
+        - buildtag
+        - cgocall
+        - composites
+        - copylocks
+        - deepequalerrors
+        - defers
+        - directive
+        - errorsas
+        - findcall
+        - framepointer
+        - httpresponse
+        - ifaceassert
+        - loopclosure
+        - lostcancel
+        - nilfunc
+        - nilness
+        - printf
+        - reflectvaluecompare
+        - shadow
+        - shift
+        - sigchanyzer
+        - slog
+        - sortslice
+        - stdmethods
+        - stringintconv
+        - structtag
+        - testinggoroutine
+        - tests
+        - timeformat
+        - unmarshal
+        - unreachable
+        - unsafeptr
+        - unusedresult
+        - unusedwrite
+    iface:
+      enable:
+        - identical
+        - unused
+        - opaque
+        - unexported
+    nestif:
+      min-complexity: 6
+    revive:
+      enable-all-rules: true
+      rules:
+        - name: package-comments
+          disabled: true
+        - name: blank-imports
+          disabled: true
+        - name: var-declaration
+          disabled: false
+        - name: add-constant
+          disabled: true
+        - name: line-length-limit
+          exclude: ["TEST"]
+          arguments: [120]
+        - name: function-length
+          exclude: ["TEST"]
+        - name: cognitive-complexity
+          exclude: ["TEST"]
+          arguments: [30]
+        - name: enforce-map-style
+          disabled: false
+          arguments:
+            - "make"
+        - name: exported
+          disabled: false
+          arguments:
+            - "say-repetitive-instead-of-stutters"
+            - "check-private-receivers"
+            - "check-public-interface"
+            - "disable-checks-on-constants"
+            - "disable-checks-on-methods"
+            - "disable-checks-on-types"
+            - "disable-checks-on-variables"
+        - name: use-any
+          disabled: true
+        - name: cyclomatic
+          arguments: [15]
+        - name: banned-characters
+          disabled: false
+        - name: argument-limit
+          disabled: false
+        - name: atomic
+          disabled: false
+        - name: time-naming
+          disabled: false
+        - name: call-to-gc
+          disabled: false
+        - name: comments-density
+          disabled: false
+        - name: confusing-naming
+          disabled: false
+        - name: constant-logical-expr
+          disabled: false
+        - name: datarace
+          disabled: false
+        - name: context-as-argument
+          disabled: false
+        - name: context-keys-type
+          disabled: false
+        - name: defer
+          severity: warning
+          disabled: false
+        - name: dot-imports
+          disabled: false
+        - name: empty-block
+          disabled: false
+        - name: error-naming
+          disabled: false
+        - name: error-return
+          disabled: false
+        - name: error-strings
+          disabled: false
+        - name: errorf
+          disabled: false
+        - name: increment-decrement
+          disabled: false
+        - name: range
+          disabled: false
+        - name: unreachable-code
+          disabled: false
+        - name: indent-error-flow
+          disabled: false
+        - name: superfluous-else
+          disabled: false
+        - name: unexported-return
+          disabled: false
+        - name: redefines-builtin-id
+          disabled: false
+        - name: receiver-naming
+          disabled: false
+        - name: var-naming
+          disabled: false
+        - name: unused-parameter
+          disabled: false
+        - name: function-result-limit
+          disabled: false
+        - name: identical-branches
+          disabled: false
+        - name: if-return
+          disabled: false
+        - name: import-alias-naming
+          disabled: false
+        - name: optimize-operands-order
+          disabled: false
+        - name: string-format
+          disabled: false
+        - name: string-of-int
+          disabled: false
+        - name: time-date
+          disabled: false
+        - name: time-equal
+          disabled: false
+        - name: unconditional-recursion
+          disabled: false
+        - name: unhandled-error
+          disabled: false
+        - name: use-fmt-print
+          disabled: false
+    usetesting:
+      context-background: false
+      context-todo: true
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/swills/base84)

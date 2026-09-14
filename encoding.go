@@ -17,7 +17,9 @@ type Encoding struct {
 }
 
 var (
-	StdEncoding      = newTrustedEncoding(Alphabet)
+	// StdEncoding is the standard Base84 encoding.
+	StdEncoding = newTrustedEncoding(Alphabet)
+	// StandardEncoding initially references StdEncoding.
 	StandardEncoding = StdEncoding
 )
 

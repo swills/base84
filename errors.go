@@ -3,10 +3,14 @@ package base84
 import "errors"
 
 var (
-	ErrInvalidAlphabet  = errors.New("base84: invalid alphabet")
+	// ErrInvalidAlphabet indicates that an alphabet cannot define an Encoding.
+	ErrInvalidAlphabet = errors.New("base84: invalid alphabet")
+	// ErrInvalidCharacter indicates that encoded data contains a byte outside the encoding alphabet.
 	ErrInvalidCharacter = errors.New("base84: invalid character")
-	ErrInvalidPadding   = errors.New("base84: invalid padding")
-	ErrNoSpaceLeft      = errors.New("base84: no space left")
+	// ErrInvalidPadding indicates that encoded data is not canonical Base84.
+	ErrInvalidPadding = errors.New("base84: invalid padding")
+	// ErrNoSpaceLeft indicates that a destination cannot hold the complete result.
+	ErrNoSpaceLeft = errors.New("base84: no space left")
 )
 
 // AlphabetError describes why NewEncoding rejected an alphabet.

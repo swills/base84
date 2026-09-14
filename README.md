@@ -1,10 +1,11 @@
 # base84
 
 `base84` is a dependency-free Go package and command-line tool for Base84 encoding.
-It is compatible with the current five-character, 31/32-bit format from
-[jedisct1/zig-base84](https://github.com/jedisct1/zig-base84). That project is a
-library, not a CLI, so this command-line tool does not claim upstream CLI
-compatibility. For format background, see the upstream repository and
+It implements the five-character format from
+[jedisct1/zig-base84](https://github.com/jedisct1/zig-base84), where each full
+group consumes either 31 or 32 input bits. That project is a library, not a
+CLI, so this command-line tool does not claim CLI compatibility with it. For
+format background, see the upstream repository and
 [the Base84 format note](https://00f.net/2026/09/09/base84/).
 
 ## Package
@@ -75,10 +76,9 @@ mathematical proof for unbounded inputs.
 
 ## CLI
 
-`base84` supports practical command-line compatibility with
-`/usr/bin/base64`, `/usr/local/bin/base64`, and GNU `gbase64`. It follows their
-common option style where it fits Base84, but does not claim exact or
-byte-for-byte behavioral compatibility.
+`base84` follows applicable command-line conventions from FreeBSD's `base64(1)`,
+Fourmilab `base64`, and GNU coreutils `base64`. It does not claim exact
+behavioral compatibility with those utilities.
 
 Its invocation is:
 
@@ -91,24 +91,25 @@ The command encodes by default. `-e` and `--encode` select encoding explicitly;
 width, accepting either a separate value or an attached short value such as
 `-w76`. The default is `0`, which disables wrapping.
 
-When decoding, `-i` and `--ignore-garbage`, plus the compatibility aliases `-n`
-and `--noerrcheck`, ignore bytes outside the Base84 alphabet. Canonical Base84
-and padding validation still apply after filtering. Without these options,
-decoding ignores the six ASCII whitespace bytes: space, tab, CR, LF, vertical
-tab, and form feed. Other invalid or non-canonical input is rejected.
+When decoding, `-i` and `--ignore-garbage`, plus the Fourmilab-compatible
+aliases `-n` and `--noerrcheck`, ignore bytes outside the Base84 alphabet.
+Canonical Base84 and padding validation still apply after filtering. Without
+these options, decoding ignores the six ASCII whitespace bytes: space, tab, CR,
+LF, vertical tab, and form feed. Other invalid or non-canonical input is
+rejected.
 
-`-h`, `--help`, and `-u` print help to standard output. `--version` prints the
-version. Options may appear before, between, or after operands until `--`.
-Boolean short options may be clustered, for example `-di` and `-dn`.
+`-h`, `--help`, and the Fourmilab-compatible `-u` print help to standard output.
+`--version` prints the version. Options may appear before, between, or after
+operands until `--`. Boolean short options may be clustered, for example `-di`
+and `-dn`.
 
 Accept up to two operands: input followed by output. Either operand may be `-`
-for the corresponding standard stream. The output operand and explicit encode
-mode are supported extensions.
+for the corresponding standard stream.
 
 Nonempty encoded output ends with a newline. Empty input encodes to zero bytes.
 Decoded output is raw binary bytes and never gains a newline. Usage errors use
-status 2. There is no separate GNU mode. Unlike GNU `gbase64`, the default wrap
-width remains 0 rather than 76.
+status 2. GNU coreutils `base64` wraps at 76 columns by default, while `base84`
+defaults to no wrapping.
 
 Examples:
 

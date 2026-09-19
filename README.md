@@ -106,6 +106,10 @@ and `-dn`.
 Accept up to two operands: input followed by output. Either operand may be `-`
 for the corresponding standard stream.
 
+Input and output are processed incrementally with bounded memory. If an input,
+decode, or output error occurs after processing begins, the output may contain
+the successfully transformed prefix.
+
 Nonempty encoded output ends with a newline. Empty input encodes to zero bytes.
 Decoded output is raw binary bytes and never gains a newline. Usage errors use
 status 2. GNU coreutils `base64` wraps at 76 columns by default, while `base84`

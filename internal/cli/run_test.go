@@ -20,6 +20,17 @@ func (failingReader) Read([]byte) (int, error) {
 	return 0, errRead
 }
 
+type dataFailingReader struct {
+	data []byte
+}
+
+func (reader *dataFailingReader) Read(destination []byte) (int, error) {
+	count := copy(destination, reader.data)
+	reader.data = nil
+
+	return count, errRead
+}
+
 type failingWriter struct{}
 
 func (failingWriter) Write([]byte) (int, error) {
@@ -279,6 +290,21 @@ func TestRunReadErrorStaysWrapped(t *testing.T) {
 		if !errors.Is(err, errRead) || errors.Unwrap(err) == nil {
 			t.Errorf("Run(mode %v, read failure) error = %v, want a wrapped read error", mode, err)
 		}
+	}
+}
+
+func TestRunEncodeClosesEncoderAfterReadError(t *testing.T) {
+	var output bytes.Buffer
+
+	input := []byte("partial input")
+
+	err := Run(Options{Mode: ModeEncode}, &dataFailingReader{data: input}, &output)
+	if !errors.Is(err, errRead) {
+		t.Fatalf("Run(encode read failure) error = %v, want %v", err, errRead)
+	}
+
+	if got, want := output.String(), base84.Encode(input); got != want {
+		t.Errorf("Run(encode read failure) output = %q, want finalized prefix %q", got, want)
 	}
 }
 

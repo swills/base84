@@ -15,6 +15,8 @@ type formattingWriter struct {
 }
 
 func encodeStream(input io.Reader, output io.Writer, wrapWidth int) error {
+	var transformErr error
+
 	formatted := &formattingWriter{output: output, column: 0, wrapWidth: wrapWidth, wrote: false}
 	encoder := base84.NewEncoder(base84.StdEncoding, formatted)
 	buffer := make([]byte, streamBufferSize)
@@ -24,22 +26,29 @@ func encodeStream(input io.Reader, output io.Writer, wrapWidth int) error {
 		if count > 0 {
 			_, err := encoder.Write(buffer[:count])
 			if err != nil {
-				return fmt.Errorf("encode input: %w", err)
+				transformErr = fmt.Errorf("encode input: %w", err)
+
+				break
 			}
 		}
 
 		if readErr != nil {
 			if readErr != io.EOF {
-				return fmt.Errorf("read input: %w", readErr)
+				transformErr = fmt.Errorf("read input: %w", readErr)
 			}
 
 			break
 		}
 	}
 
-	err := encoder.Close()
-	if err != nil {
-		return fmt.Errorf("finish encoding: %w", err)
+	closeErr := encoder.Close()
+
+	if transformErr != nil {
+		return transformErr
+	}
+
+	if closeErr != nil {
+		return fmt.Errorf("finish encoding: %w", closeErr)
 	}
 
 	return formatted.finish()

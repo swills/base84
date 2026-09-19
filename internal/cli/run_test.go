@@ -273,10 +273,12 @@ func TestRunRejectsNegativeWrapWidth(t *testing.T) {
 }
 
 func TestRunReadErrorStaysWrapped(t *testing.T) {
-	err := Run(Options{Mode: ModeEncode}, failingReader{}, io.Discard)
+	for _, mode := range []Mode{ModeEncode, ModeDecode} {
+		err := Run(Options{Mode: mode}, failingReader{}, io.Discard)
 
-	if !errors.Is(err, errRead) || errors.Unwrap(err) == nil {
-		t.Errorf("Run(read failure) error = %v, want a wrapped read error", err)
+		if !errors.Is(err, errRead) || errors.Unwrap(err) == nil {
+			t.Errorf("Run(mode %v, read failure) error = %v, want a wrapped read error", mode, err)
+		}
 	}
 }
 
@@ -298,5 +300,14 @@ func TestRunWriteFailuresStayWrapped(t *testing.T) {
 				t.Errorf("Run(%s) error = %v, want wrapped %v", test.name, err, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestRunDecodeWriteFailuresStayWrapped(t *testing.T) {
+	encoded := bytes.NewBufferString(base84.Encode([]byte("decoded output")))
+
+	err := Run(Options{Mode: ModeDecode}, encoded, shortWriter{})
+	if !errors.Is(err, io.ErrShortWrite) || errors.Unwrap(err) == nil {
+		t.Errorf("Run(decode short write) error = %v, want wrapped %v", err, io.ErrShortWrite)
 	}
 }

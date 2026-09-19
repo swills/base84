@@ -3,6 +3,7 @@ package base84
 import (
 	"bytes"
 	"errors"
+	"io"
 	"testing"
 )
 
@@ -17,6 +18,8 @@ var _ func(*Encoding, []byte, []byte) []byte = (*Encoding).AppendEncode
 var _ func(*Encoding, []byte, []byte) ([]byte, error) = (*Encoding).AppendDecode
 var _ func(*Encoding, []byte, []byte) (int, error) = (*Encoding).Encode
 var _ func(*Encoding, []byte, []byte) (int, error) = (*Encoding).Decode
+var _ func(*Encoding, io.Writer) io.WriteCloser = NewEncoder
+var _ func(*Encoding, io.Reader) io.Reader = NewDecoder
 
 func TestAlphabet(t *testing.T) {
 	const want = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&'()+,-;=@[]^_`{}~"

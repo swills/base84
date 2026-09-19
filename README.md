@@ -66,6 +66,31 @@ number of bytes written and `ErrNoSpaceLeft` when the destination is too short.
 Either method may leave a partial output prefix in the destination. For normal
 growable Go buffers, prefer `AppendEncode` and `AppendDecode`.
 
+### Streaming
+
+`NewEncoder` and `NewDecoder` process streams with bounded memory. Their shape
+matches Go's standard `encoding/base64` package:
+
+```go
+encoder := base84.NewEncoder(base84.StdEncoding, output)
+if _, err := io.Copy(encoder, input); err != nil {
+	return fmt.Errorf("encode: %w", err)
+}
+if err := encoder.Close(); err != nil {
+	return fmt.Errorf("finish encoding: %w", err)
+}
+
+decoded, err := io.ReadAll(base84.NewDecoder(base84.StdEncoding, encodedInput))
+if err != nil {
+	return fmt.Errorf("decode: %w", err)
+}
+```
+
+Closing an encoder is required to flush its final partial group. The encoder
+does not close its output or add line breaks. The decoder is strict and does
+not discard whitespace. Both constructors accept custom encodings. The CLI's
+line wrapping and input filtering are CLI behavior rather than package behavior.
+
 ## Compatibility and testing
 
 The test suite mirrors upstream fixed vectors and errors. It also exhausts all

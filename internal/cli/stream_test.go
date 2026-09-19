@@ -163,3 +163,16 @@ func TestRunWritesBeforeReadingToEOF(t *testing.T) {
 		})
 	}
 }
+
+func TestRunDecodeWritesValidPrefixBeforeError(t *testing.T) {
+	var output bytes.Buffer
+
+	err := Run(Options{Mode: ModeDecode}, bytes.NewBufferString("AAAAA/"), &output)
+	if !errors.Is(err, base84.ErrInvalidCharacter) {
+		t.Fatalf("Run(decode invalid suffix) error = %v, want %v", err, base84.ErrInvalidCharacter)
+	}
+
+	if got, want := output.Bytes(), []byte{0, 0, 0, 0}; !bytes.Equal(got, want) {
+		t.Errorf("Run(decode invalid suffix) output = %x, want %x", got, want)
+	}
+}

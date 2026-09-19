@@ -1,44 +1,30 @@
 package cli
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 
 	"github.com/swills/base84"
 )
 
-type streamEncoder struct {
-	output      *bufio.Writer
-	accumulator uint64
-	bitCount    uint
-	column      int
-	wrapWidth   int
-	wrote       bool
+type formattingWriter struct {
+	output    io.Writer
+	column    int
+	wrapWidth int
+	wrote     bool
 }
 
 func encodeStream(input io.Reader, output io.Writer, wrapWidth int) error {
-	encoder := streamEncoder{
-		output:      bufio.NewWriterSize(output, streamBufferSize),
-		accumulator: 0,
-		bitCount:    0,
-		column:      0,
-		wrapWidth:   wrapWidth,
-		wrote:       false,
-	}
+	formatted := &formattingWriter{output: output, column: 0, wrapWidth: wrapWidth, wrote: false}
+	encoder := base84.NewEncoder(base84.StdEncoding, formatted)
 	buffer := make([]byte, streamBufferSize)
 
 	for {
 		count, readErr := input.Read(buffer)
 		if count > 0 {
-			err := encoder.write(buffer[:count])
+			_, err := encoder.Write(buffer[:count])
 			if err != nil {
-				return err
-			}
-
-			err = encoder.flush()
-			if err != nil {
-				return err
+				return fmt.Errorf("encode input: %w", err)
 			}
 		}
 
@@ -51,100 +37,60 @@ func encodeStream(input io.Reader, output io.Writer, wrapWidth int) error {
 		}
 	}
 
-	err := encoder.finish()
+	err := encoder.Close()
 	if err != nil {
-		return err
+		return fmt.Errorf("finish encoding: %w", err)
 	}
 
-	return encoder.flush()
+	return formatted.finish()
 }
 
-func (encoder *streamEncoder) write(source []byte) error {
-	for _, sourceByte := range source {
-		encoder.accumulator |= uint64(sourceByte) << encoder.bitCount
-		encoder.bitCount += 8
+func (writer *formattingWriter) Write(source []byte) (int, error) {
+	written := 0
 
-		if encoder.bitCount <= streamGroupBits {
-			continue
+	for len(source) > 0 {
+		if writer.wrapWidth > 0 && writer.column == writer.wrapWidth {
+			err := writer.writeAll([]byte{'\n'})
+			if err != nil {
+				return written, err
+			}
+
+			writer.column = 0
 		}
 
-		low := uint32(encoder.accumulator & streamLowWordMask)
-		bits := streamGroupBitCount(uint64(low))
-
-		value := low
-		if bits == streamGroupBits {
-			value &= uint32(streamGroupMask)
+		count := len(source)
+		if writer.wrapWidth > 0 {
+			count = min(count, writer.wrapWidth-writer.column)
 		}
 
-		err := encoder.writeDigits(value, streamGroupCharacters)
+		err := writer.writeAll(source[:count])
 		if err != nil {
-			return err
+			return written, err
 		}
 
-		encoder.accumulator >>= bits
-		encoder.bitCount -= bits
+		writer.column += count
+		writer.wrote = true
+		written += count
+		source = source[count:]
 	}
 
-	return nil
+	return written, nil
 }
 
-func (encoder *streamEncoder) finish() error {
-	if encoder.bitCount > 0 {
-		characters := streamTailCharacterCount(encoder.bitCount)
-		if streamFitsOneCharacter(encoder.bitCount, encoder.accumulator) {
-			characters = 1
-		}
-
-		value := uint32(encoder.accumulator & streamLowWordMask)
-
-		err := encoder.writeDigits(value, characters)
-		if err != nil {
-			return err
-		}
-	}
-
-	if !encoder.wrote {
+func (writer *formattingWriter) finish() error {
+	if !writer.wrote {
 		return nil
 	}
 
-	err := encoder.output.WriteByte('\n')
-	if err != nil {
-		return fmt.Errorf("write output: %w", err)
-	}
-
-	return nil
+	return writer.writeAll([]byte{'\n'})
 }
 
-func (encoder *streamEncoder) writeDigits(value uint32, count int) error {
-	for index := range [streamGroupCharacters]struct{}{} {
-		if index == count {
-			break
-		}
-
-		if encoder.wrapWidth > 0 && encoder.column == encoder.wrapWidth {
-			err := encoder.output.WriteByte('\n')
-			if err != nil {
-				return fmt.Errorf("write output: %w", err)
-			}
-
-			encoder.column = 0
-		}
-
-		err := encoder.output.WriteByte(base84.Alphabet[value%uint32(streamAlphabetSize)])
-		if err != nil {
-			return fmt.Errorf("write output: %w", err)
-		}
-
-		value /= uint32(streamAlphabetSize)
-		encoder.column++
-		encoder.wrote = true
+func (writer *formattingWriter) writeAll(value []byte) error {
+	written, err := writer.output.Write(value)
+	if err == nil && written != len(value) {
+		err = io.ErrShortWrite
 	}
 
-	return nil
-}
-
-func (encoder *streamEncoder) flush() error {
-	err := encoder.output.Flush()
 	if err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

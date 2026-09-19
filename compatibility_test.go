@@ -223,7 +223,12 @@ func TestSizeBoundInvariants(t *testing.T) {
 		}
 
 		if len(decoded) > decodedSizeUpperBound(len(encoded)) {
-			t.Fatalf("decoded length %d exceeds bound %d for encoded length %d", len(decoded), decodedSizeUpperBound(len(encoded)), len(encoded))
+			t.Fatalf(
+				"decoded length %d exceeds bound %d for encoded length %d",
+				len(decoded),
+				decodedSizeUpperBound(len(encoded)),
+				len(encoded),
+			)
 		}
 	}
 

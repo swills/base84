@@ -197,7 +197,10 @@ func TestRunDecodeIgnoreGarbagePreservesAlphabetPunctuation(t *testing.T) {
 
 		err := Run(Options{Mode: ModeDecode, IgnoreGarbage: true}, bytes.NewReader([]byte{character}), io.Discard)
 		if !errors.Is(err, base84.ErrInvalidPadding) {
-			t.Errorf("Run(ignore garbage, alphabet punctuation %q) error = %v, want %v", character, err, base84.ErrInvalidPadding)
+			t.Errorf(
+				"Run(ignore garbage, alphabet punctuation %q) error = %v, want %v",
+				character, err, base84.ErrInvalidPadding,
+			)
 		}
 	}
 }

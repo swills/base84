@@ -129,7 +129,10 @@ func TestCommandRunReportsInputCloseFailureWhenTransformSucceeds(t *testing.T) {
 		t.Errorf("output before close failure = %q, want transformed output", got)
 	}
 
-	if got := stderr.String(); !strings.Contains(got, "close input \"input\"") || !strings.Contains(got, errTestClose.Error()) {
+	got := stderr.String()
+
+	hasExpectedErrors := strings.Contains(got, "close input \"input\"") && strings.Contains(got, errTestClose.Error())
+	if !hasExpectedErrors {
 		t.Errorf("close failure stderr = %q, want path and close error", got)
 	}
 }
@@ -159,7 +162,10 @@ func TestCommandRunReportsOutputCloseFailureWhenTransformSucceeds(t *testing.T) 
 		t.Errorf("output before close failure = %q, want transformed output", got)
 	}
 
-	if got := stderr.String(); !strings.Contains(got, "close output \"output\"") || !strings.Contains(got, errTestClose.Error()) {
+	got := stderr.String()
+
+	hasExpectedErrors := strings.Contains(got, "close output \"output\"") && strings.Contains(got, errTestClose.Error())
+	if !hasExpectedErrors {
 		t.Errorf("close failure stderr = %q, want path and close error", got)
 	}
 }
@@ -185,7 +191,10 @@ func TestCommandRunPreservesTransformErrorOverOutputCloseFailure(t *testing.T) {
 		t.Fatalf("command.run(write failure) returned %d, want 1", code)
 	}
 
-	if got := stderr.String(); !strings.Contains(got, errTestWrite.Error()) || strings.Contains(got, errTestClose.Error()) {
+	got := stderr.String()
+
+	hasExpectedError := strings.Contains(got, errTestWrite.Error()) && !strings.Contains(got, errTestClose.Error())
+	if !hasExpectedError {
 		t.Errorf("write failure stderr = %q, want write error without close error", got)
 	}
 }
@@ -222,7 +231,10 @@ func TestCommandRunClosesInputWhenOutputCreationFails(t *testing.T) {
 		t.Error("command.run(create failure) did not close its opened input")
 	}
 
-	if got := stderr.String(); !strings.Contains(got, "create output \"output\"") || !strings.Contains(got, errTestCreate.Error()) {
+	got := stderr.String()
+
+	hasExpectedErrors := strings.Contains(got, "create output \"output\"") && strings.Contains(got, errTestCreate.Error())
+	if !hasExpectedErrors {
 		t.Errorf("create failure stderr = %q, want path and creation error", got)
 	}
 }

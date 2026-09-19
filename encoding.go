@@ -55,7 +55,7 @@ func NewEncoding(alphabet string) (*Encoding, error) {
 }
 
 func newTrustedEncoding(alphabet string) *Encoding {
-	encoding := &Encoding{}
+	encoding := &Encoding{forward: [alphabetSize]byte{}, inverse: [256]byte{}}
 	for index := range encoding.inverse {
 		encoding.inverse[index] = invalidDigit
 	}

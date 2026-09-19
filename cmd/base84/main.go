@@ -95,42 +95,49 @@ func (command command) run(args []string) int {
 }
 
 func parseArguments(args []string, stdout, stderr io.Writer) parseOutcome {
-	values := argumentValues{}
+	var (
+		values          argumentValues
+		emptyInvocation invocation
+	)
+
 	flags := newArgumentFlagSet(&values, stderr)
 
 	err := flags.Parse(normalizeArguments(args))
 	if err != nil {
-		return parseOutcome{exitCode: 2}
+		return parseOutcome{invocation: emptyInvocation, exitCode: 2, ready: false}
 	}
 
 	if values.help {
 		flags.SetOutput(stdout)
 		flags.Usage()
 
-		return parseOutcome{exitCode: 0}
+		return parseOutcome{invocation: emptyInvocation, exitCode: 0, ready: false}
 	}
 
 	if values.showVersion {
-		return parseOutcome{invocation: invocation{version: true}, ready: true}
+		versionInvocation := emptyInvocation
+		versionInvocation.version = true
+
+		return parseOutcome{invocation: versionInvocation, exitCode: 0, ready: true}
 	}
 
 	if values.encode && values.decode {
 		reportUsage(flags, "encode and decode modes cannot be used together")
 
-		return parseOutcome{exitCode: 2}
+		return parseOutcome{invocation: emptyInvocation, exitCode: 2, ready: false}
 	}
 
 	if values.wrapWidth < 0 {
 		reportUsage(flags, "wrap width must be nonnegative")
 
-		return parseOutcome{exitCode: 2}
+		return parseOutcome{invocation: emptyInvocation, exitCode: 2, ready: false}
 	}
 
 	operands := flags.Args()
 	if len(operands) > 2 {
 		reportUsage(flags, "expected at most two operands")
 
-		return parseOutcome{exitCode: 2}
+		return parseOutcome{invocation: emptyInvocation, exitCode: 2, ready: false}
 	}
 
 	parsed := invocation{
@@ -141,6 +148,7 @@ func parseArguments(args []string, stdout, stderr io.Writer) parseOutcome {
 		},
 		inputPath:  "-",
 		outputPath: "-",
+		version:    false,
 	}
 	if values.decode {
 		parsed.options.Mode = cli.ModeDecode
@@ -154,7 +162,7 @@ func parseArguments(args []string, stdout, stderr io.Writer) parseOutcome {
 		parsed.outputPath = operands[1]
 	}
 
-	return parseOutcome{invocation: parsed, ready: true}
+	return parseOutcome{invocation: parsed, exitCode: 0, ready: true}
 }
 
 func newArgumentFlagSet(values *argumentValues, output io.Writer) *flag.FlagSet {

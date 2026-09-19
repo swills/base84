@@ -20,7 +20,7 @@ func (encoding *Encoding) EncodeToString(source []byte) string {
 func (encoding *Encoding) AppendEncode(destination, source []byte) []byte {
 	prefixLength := len(destination)
 	destination = append(destination, make([]byte, encoding.EncodedLen(len(source)))...)
-	writer := byteWriter{destination: destination[prefixLength:]}
+	writer := byteWriter{destination: destination[prefixLength:], written: 0, full: false}
 	encoding.encodeTo(&writer, source)
 
 	return destination[:prefixLength+writer.written]
@@ -29,7 +29,7 @@ func (encoding *Encoding) AppendEncode(destination, source []byte) []byte {
 // Encode writes the canonical Base84 representation of source to destination.
 // If destination is too short, it returns the bytes written and ErrNoSpaceLeft.
 func (encoding *Encoding) Encode(destination, source []byte) (int, error) {
-	writer := byteWriter{destination: destination}
+	writer := byteWriter{destination: destination, written: 0, full: false}
 	encoding.encodeTo(&writer, source)
 
 	if writer.full {

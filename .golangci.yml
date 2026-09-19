@@ -18,6 +18,7 @@ linters:
     - errname
     - errorlint
     - exhaustive
+    - exhaustruct_v5
     - forbidigo
     - forcetypeassert
     - funlen
@@ -96,13 +97,13 @@ linters:
           - dupword
           - err113
           - errcheck
+          - exhaustruct_v5
           - forbidigo
           - forcetypeassert
           - funlen
           - gocognit
           - gocyclo
           - gosec
-          - lll
           - maintidx
           - musttag
           - wrapcheck

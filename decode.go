@@ -34,7 +34,7 @@ func (encoding *Encoding) AppendDecode(destination, encoded []byte) ([]byte, err
 // Decode writes bytes represented by canonical Base84 data to destination.
 // On error it returns the bytes written before the invalid input or short destination.
 func (encoding *Encoding) Decode(destination, encoded []byte) (int, error) {
-	writer := byteWriter{destination: destination}
+	writer := byteWriter{destination: destination, written: 0, full: false}
 
 	err := encoding.decodeTo(&writer, encoded)
 	if err != nil {

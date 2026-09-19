@@ -1,9 +1,8 @@
 # Benchmarks
 
-Recorded 2026-09-12 on FreeBSD 16.0-CURRENT amd64, Intel Xeon w5-2455X,
-logical CPU 2. Go was 1.26.7 with `GOMAXPROCS=1`; Zig was 0.16.0 in
-`ReleaseFast` mode. `powerd` was stopped and `dev.hwpstate_intel.2.epp` was
-set to `0` during the recorded runs.
+Results from an Apple M1 Pro running macOS are listed first, followed by an
+Intel Xeon w5-2455X running FreeBSD. These results are illustrative rather
+than a universal language or library ranking.
 
 ## Reproduce
 
@@ -29,15 +28,63 @@ when needed, for example `ZIG_BASE84_ROOT=/path/to/zig-base84 task bench-zig`.
 
 Each case uses bytes `i` defined by `(i*131+17)&0xff` and payload sizes 16,
 31, 1024, and 65536 bytes. Setup and buffer allocation occur before timing.
-Each suite takes five 500ms samples and reports the median. Throughput uses
-decoded payload bytes. Go `MB/s` is decimal payload MB/s, and the Zig harness
-emits the matching `payload_mb_per_s` field.
+Each suite takes five 500ms samples. Throughput uses decoded payload bytes. Go
+`MB/s` is decimal payload MB/s, and the Zig harness emits the matching
+`payload_mb_per_s` field.
 
 The primary comparison is Go `Encoding.Encode` and `Encoding.Decode` with
 fixed destination buffers against Zig fixed buffers. Go allocating convenience
 APIs are reported separately. The Zig harness does not measure allocating APIs.
 
-The final table uses medians from Go decode and encode suites run immediately
+## Apple M1 Pro, macOS
+
+Recorded 2026-09-19 on macOS 27.0 arm64. Go was 1.27.1 with `GOMAXPROCS=1`;
+Zig was 0.16.0 in `ReleaseFast` mode. The Go suite ran immediately before and
+after the Zig suite. The tables report the median of the ten combined Go
+samples and the Zig harness median of five samples. macOS does not provide the
+`cpuset` CPU pinning used for the FreeBSD run.
+
+### Fixed-Buffer Medians
+
+| Operation | Payload bytes | Go ns/op | Zig ns/op | Result |
+| --- | ---: | ---: | ---: | --- |
+| Encode | 16 | 29.36 | 51.788 | Go 1.76x faster |
+| Encode | 31 | 59.745 | 98.748 | Go 1.65x faster |
+| Encode | 1024 | 2057 | 3382.612 | Go 1.64x faster |
+| Encode | 65536 | 130505.5 | 217071.841 | Go 1.66x faster |
+| Decode | 16 | 25.245 | 35.045 | Go 1.39x faster |
+| Decode | 31 | 89.46 | 67.889 | Zig 1.32x faster |
+| Decode | 1024 | 1414 | 2220.398 | Go 1.57x faster |
+| Decode | 65536 | 89151 | 143926.964 | Go 1.61x faster |
+
+### Allocating Go API Medians
+
+| Operation | Payload bytes | ns/op | B/op | allocs/op |
+| --- | ---: | ---: | ---: | ---: |
+| Encode | 16 | 60.595 | 48 | 2 |
+| Encode | 31 | 91.905 | 96 | 2 |
+| Encode | 1024 | 2350 | 2816 | 2 |
+| Encode | 65536 | 141893.5 | 180224 | 2 |
+| Decode | 16 | 38.195 | 16 | 1 |
+| Decode | 31 | 105.25 | 32 | 1 |
+| Decode | 1024 | 1545.5 | 1024 | 1 |
+| Decode | 65536 | 93182.5 | 65536 | 1 |
+
+### Interpretation
+
+On this host, Go leads every fixed-buffer encode size and all fixed-buffer
+decode sizes except 31 bytes. Go reuse is 0 allocs/op at every listed size.
+The lack of CPU affinity makes small differences less reliable, but the
+fixed-buffer gaps here range from 32% to 76%.
+
+## Intel Xeon w5-2455X, FreeBSD
+
+Recorded 2026-09-12 on FreeBSD 16.0-CURRENT amd64, logical CPU 2. Go was
+1.26.7 with `GOMAXPROCS=1`; Zig was 0.16.0 in `ReleaseFast` mode. `powerd` was
+stopped and `dev.hwpstate_intel.2.epp` was set to `0` during the recorded
+runs.
+
+The tables use medians from Go decode and encode suites run immediately
 before and after the Zig suite, including samples affected by observed CPU
 frequency changes. Isolated A/B runs were used to decide which implementation
 changes to retain: the 256-byte decode lookup improved bulk decode by about
@@ -59,7 +106,7 @@ about 24–25% at 1024 and 65536 bytes. Horner arithmetic was effectively tied a
 65536 bytes but about 17% slower at 1024 bytes, so the fixed-place form was
 retained. Invalid groups and short tails still use the generic reader.
 
-## Fixed-Buffer Medians
+### Fixed-Buffer Medians
 
 | Operation | Payload bytes | Go ns/op | Zig ns/op | Result |
 | --- | ---: | ---: | ---: | --- |
@@ -72,7 +119,7 @@ retained. Invalid groups and short tails still use the generic reader.
 | Decode | 1024 | 1754 | 2341.094 | Go 1.33x faster |
 | Decode | 65536 | 117002 | 120664.600 | Within 4% |
 
-## Allocating Go API Medians
+### Allocating Go API Medians
 
 | Operation | Payload bytes | ns/op | B/op | allocs/op |
 | --- | ---: | ---: | ---: | ---: |
@@ -85,13 +132,15 @@ retained. Invalid groups and short tails still use the generic reader.
 | Decode | 1024 | 1631 | 1024 | 1 |
 | Decode | 65536 | 105162 | 65536 | 1 |
 
-## Interpretation and Limits
+### Interpretation
 
 On this sequential host run, Zig's fixed-buffer implementation leads bulk
 encode, while Go leads 1024-byte decode and 65536-byte decode is within 4%.
 Go leads 16- and 31-byte encode, while Zig leads decode at those sizes. Go reuse
 is 0 allocs/op at every listed size; the allocating convenience APIs have the
 costs shown above.
+
+## Limits
 
 These results are illustrative, not a universal language or library ranking.
 Compiler versions, CPU model, frequency behavior, CPU affinity, and background

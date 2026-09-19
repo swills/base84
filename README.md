@@ -170,5 +170,38 @@ cpuset -l 2 task bench
 cpuset -l 2 task bench-zig
 ```
 
-See [BENCHMARKS.md](BENCHMARKS.md) for the methodology, recorded environment,
-and illustrative results.
+### Apple M1 Pro, macOS
+
+Recorded 2026-09-19 with Go 1.27.1 and Zig 0.16.0. Go fixed-buffer
+measurements combine two five-sample runs immediately before and after the Zig
+suite. macOS does not provide the `cpuset` CPU pinning used for the FreeBSD
+run.
+
+| Operation | Payload bytes | Go ns/op | Zig ns/op | Result |
+| --- | ---: | ---: | ---: | --- |
+| Encode | 16 | 29.36 | 51.788 | Go 1.76x faster |
+| Encode | 31 | 59.745 | 98.748 | Go 1.65x faster |
+| Encode | 1024 | 2057 | 3382.612 | Go 1.64x faster |
+| Encode | 65536 | 130505.5 | 217071.841 | Go 1.66x faster |
+| Decode | 16 | 25.245 | 35.045 | Go 1.39x faster |
+| Decode | 31 | 89.46 | 67.889 | Zig 1.32x faster |
+| Decode | 1024 | 1414 | 2220.398 | Go 1.57x faster |
+| Decode | 65536 | 89151 | 143926.964 | Go 1.61x faster |
+
+### Intel Xeon w5-2455X, FreeBSD
+
+Recorded 2026-09-12 with Go 1.26.7 and Zig 0.16.0, pinned to logical CPU 2.
+
+| Operation | Payload bytes | Go ns/op | Zig ns/op | Result |
+| --- | ---: | ---: | ---: | --- |
+| Encode | 16 | 31.39 | 34.905 | Go 1.11x faster |
+| Encode | 31 | 59.61 | 65.950 | Go 1.11x faster |
+| Encode | 1024 | 1919 | 1603.091 | Zig 1.20x faster |
+| Encode | 65536 | 131996 | 106704.178 | Zig 1.24x faster |
+| Decode | 16 | 36.44 | 30.900 | Zig 1.18x faster |
+| Decode | 31 | 103.8 | 58.677 | Zig 1.77x faster |
+| Decode | 1024 | 1754 | 2341.094 | Go 1.33x faster |
+| Decode | 65536 | 117002 | 120664.600 | Within 4% |
+
+See [BENCHMARKS.md](BENCHMARKS.md) for complete methodology, allocating API
+results, environment details, and interpretation.

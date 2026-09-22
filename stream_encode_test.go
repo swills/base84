@@ -54,7 +54,7 @@ func TestNewEncoderMatchesFixedCodecAcrossWriteBoundaries(t *testing.T) {
 	}
 }
 
-func TestNewEncoderCloseAndErrors(t *testing.T) {
+func TestNewEncoderClose(t *testing.T) {
 	var output bytes.Buffer
 
 	stream := NewEncoder(StdEncoding, &output)
@@ -78,7 +78,9 @@ func TestNewEncoderCloseAndErrors(t *testing.T) {
 	if written != 0 || !errors.Is(err, io.ErrClosedPipe) {
 		t.Errorf("Write after Close = %d, %v, want 0, %v", written, err, io.ErrClosedPipe)
 	}
+}
 
+func TestNewEncoderCloseErrors(t *testing.T) {
 	for _, test := range []struct {
 		writer  io.Writer
 		wantErr error
@@ -88,7 +90,7 @@ func TestNewEncoderCloseAndErrors(t *testing.T) {
 	} {
 		failed := NewEncoder(StdEncoding, test.writer)
 
-		_, err = failed.Write([]byte{1})
+		_, err := failed.Write([]byte{1})
 		if err != nil {
 			t.Fatalf("buffered Write error = %v", err)
 		}

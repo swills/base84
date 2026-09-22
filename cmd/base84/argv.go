@@ -2,6 +2,11 @@ package main
 
 import "strings"
 
+type normalizedOption struct {
+	options   []string
+	nextIndex int
+}
+
 func normalizeArguments(args []string) []string {
 	options := make([]string, 0, len(args))
 	operands := make([]string, 0, len(args))
@@ -20,35 +25,8 @@ func normalizeArguments(args []string) []string {
 			continue
 		}
 
-		if isWrapOption(argument) {
-			options = append(options, argument)
-
-			if index+1 < len(args) {
-				index++
-				options = append(options, args[index])
-			}
-
-			continue
-		}
-
-		if isPreservedOption(argument) || strings.HasPrefix(argument, "--") {
-			options = append(options, argument)
-
-			continue
-		}
-
-		expanded, ok := expandShortOptions(argument)
-		if ok {
-			options = append(options, expanded...)
-			if expanded[len(expanded)-1] == "-w" && index+1 < len(args) {
-				index++
-				options = append(options, args[index])
-			}
-
-			continue
-		}
-
-		options = append(options, argument)
+		normalized := appendNormalizedOption(options, args, index)
+		options, index = normalized.options, normalized.nextIndex
 	}
 
 	normalized := make([]string, 0, len(options)+len(operands)+1)
@@ -57,6 +35,37 @@ func normalizeArguments(args []string) []string {
 	normalized = append(normalized, operands...)
 
 	return normalized
+}
+
+func appendNormalizedOption(options, args []string, index int) normalizedOption {
+	argument := args[index]
+	if isWrapOption(argument) {
+		options = append(options, argument)
+
+		if index+1 < len(args) {
+			index++
+			options = append(options, args[index])
+		}
+
+		return normalizedOption{options: options, nextIndex: index}
+	}
+
+	if isPreservedOption(argument) || strings.HasPrefix(argument, "--") {
+		return normalizedOption{options: append(options, argument), nextIndex: index}
+	}
+
+	expanded, ok := expandShortOptions(argument)
+	if !ok {
+		return normalizedOption{options: append(options, argument), nextIndex: index}
+	}
+
+	options = append(options, expanded...)
+	if expanded[len(expanded)-1] == "-w" && index+1 < len(args) {
+		index++
+		options = append(options, args[index])
+	}
+
+	return normalizedOption{options: options, nextIndex: index}
 }
 
 func isWrapOption(argument string) bool {

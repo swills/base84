@@ -35,60 +35,77 @@ func (osFileSystem) stat(path string) (fs.FileInfo, error) {
 	return os.Stat(path)
 }
 
-func (command command) transform(invocation invocation) (resultErr error) {
-	input := command.stdin
-
-	var openedInput fs.File
-
-	if invocation.inputPath != "-" {
-		file, err := command.files.open(invocation.inputPath)
-		if err != nil {
-			return fmt.Errorf("open input %q: %w", invocation.inputPath, err)
-		}
-
-		openedInput = file
-
-		defer func() {
-			closeErr := openedInput.Close()
-			if closeErr != nil && resultErr == nil {
-				resultErr = fmt.Errorf("close input %q: %w", invocation.inputPath, closeErr)
-			}
-		}()
-
-		input = openedInput
-	}
-
-	output := command.stdout
-
-	if invocation.outputPath != "-" {
-		if openedInput != nil {
-			err := command.rejectSameFile(openedInput, invocation)
-			if err != nil {
-				return err
-			}
-		}
-
-		openedOutput, err := command.files.create(invocation.outputPath)
-		if err != nil {
-			return fmt.Errorf("create output %q: %w", invocation.outputPath, err)
-		}
-
-		defer func() {
-			closeErr := openedOutput.Close()
-			if closeErr != nil && resultErr == nil {
-				resultErr = fmt.Errorf("close output %q: %w", invocation.outputPath, closeErr)
-			}
-		}()
-
-		output = openedOutput
-	}
-
-	err := cli.Run(invocation.options, input, output)
+func (command command) transform(invocation invocation) error {
+	input, openedInput, err := command.openInput(invocation.inputPath)
 	if err != nil {
-		return fmt.Errorf("transform input: %w", err)
+		return err
 	}
 
-	return nil
+	output, openedOutput, resultErr := command.openOutput(openedInput, invocation)
+	if resultErr != nil {
+		if openedInput != nil {
+			resultErr = closeTransformFile(openedInput, "input", invocation.inputPath, resultErr)
+		}
+
+		return resultErr
+	}
+
+	resultErr = cli.Run(invocation.options, input, output)
+	if resultErr != nil {
+		resultErr = fmt.Errorf("transform input: %w", resultErr)
+	}
+
+	if openedOutput != nil {
+		resultErr = closeTransformFile(openedOutput, "output", invocation.outputPath, resultErr)
+	}
+
+	if openedInput != nil {
+		resultErr = closeTransformFile(openedInput, "input", invocation.inputPath, resultErr)
+	}
+
+	return resultErr
+}
+
+func (command command) openInput(path string) (io.Reader, fs.File, error) {
+	if path == "-" {
+		return command.stdin, nil, nil
+	}
+
+	input, err := command.files.open(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("open input %q: %w", path, err)
+	}
+
+	return input, input, nil
+}
+
+func (command command) openOutput(input fs.File, invocation invocation) (io.Writer, io.WriteCloser, error) {
+	if invocation.outputPath == "-" {
+		return command.stdout, nil, nil
+	}
+
+	if input != nil {
+		err := command.rejectSameFile(input, invocation)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	output, err := command.files.create(invocation.outputPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("create output %q: %w", invocation.outputPath, err)
+	}
+
+	return output, output, nil
+}
+
+func closeTransformFile(closer io.Closer, kind, path string, resultErr error) error {
+	closeErr := closer.Close()
+	if closeErr != nil && resultErr == nil {
+		return fmt.Errorf("close %s %q: %w", kind, path, closeErr)
+	}
+
+	return resultErr
 }
 
 func (command command) rejectSameFile(input fs.File, invocation invocation) error {

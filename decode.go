@@ -51,24 +51,14 @@ func (encoding *Encoding) decodeTo(writer *byteWriter, encoded []byte) error {
 		finalBits   uint
 	)
 
-	for offset := 0; offset < len(encoded); offset += groupCharacters {
-		chunkLength := min(groupCharacters, len(encoded)-offset)
-		chunk := encoded[offset : offset+chunkLength]
-
-		value, err := encoding.readChunk(chunk, offset)
+	fullLength := len(encoded) / groupCharacters * groupCharacters
+	for offset := 0; offset < fullLength; offset += groupCharacters {
+		value, err := encoding.readChunk(encoded[offset:offset+groupCharacters], offset)
 		if err != nil {
 			return err
 		}
 
-		if chunkLength == groupCharacters {
-			finalBits = groupBitCount(value)
-		} else {
-			finalBits, err = tailBitCount(chunkLength, pendingBits, value)
-			if err != nil {
-				return fmt.Errorf("tail at byte %d: %w", offset, err)
-			}
-		}
-
+		finalBits = groupBitCount(value)
 		accumulator |= value << pendingBits
 		pendingBits += finalBits
 
@@ -82,7 +72,7 @@ func (encoding *Encoding) decodeTo(writer *byteWriter, encoded []byte) error {
 				continue
 			}
 
-			if !writer.writeByte(byte(accumulator)) {
+			if !writer.writeByte(byte(accumulator & 0xff)) {
 				return ErrNoSpaceLeft
 			}
 
@@ -91,10 +81,62 @@ func (encoding *Encoding) decodeTo(writer *byteWriter, encoded []byte) error {
 		}
 	}
 
-	if len(encoded) > 0 && len(encoded)%groupCharacters == 0 {
-		if accumulator != 0 || finalBits-pendingBits <= 25 {
-			return fmt.Errorf("final group: %w", ErrInvalidPadding)
+	if fullLength < len(encoded) {
+		return encoding.decodeTail(writer, encoded[fullLength:], fullLength, accumulator, pendingBits)
+	}
+
+	return validateFinalGroup(encoded, accumulator, finalBits, pendingBits)
+}
+
+func (encoding *Encoding) decodeTail(
+	writer *byteWriter,
+	encoded []byte,
+	offset int,
+	accumulator uint64,
+	pendingBits uint,
+) error {
+	value, err := encoding.readChunk(encoded, offset)
+	if err != nil {
+		return err
+	}
+
+	finalBits, err := tailBitCount(len(encoded), pendingBits, value)
+	if err != nil {
+		return fmt.Errorf("tail at byte %d: %w", offset, err)
+	}
+
+	accumulator |= value << pendingBits
+	pendingBits += finalBits
+
+	return writeDecodedBytes(writer, &accumulator, &pendingBits)
+}
+
+func writeDecodedBytes(writer *byteWriter, accumulator *uint64, pendingBits *uint) error {
+	for *pendingBits >= 8 {
+		byteCount := int(*pendingBits / 8)
+		if byteCount == 3 && writer.write3(*accumulator) ||
+			byteCount == 4 && writer.write4(*accumulator) {
+			*accumulator >>= byteCount * 8
+			*pendingBits -= uint(byteCount * 8)
+
+			continue
 		}
+
+		if !writer.writeByte(byte(*accumulator & 0xff)) {
+			return ErrNoSpaceLeft
+		}
+
+		*accumulator >>= 8
+		*pendingBits -= 8
+	}
+
+	return nil
+}
+
+func validateFinalGroup(encoded []byte, accumulator uint64, finalBits, pendingBits uint) error {
+	if len(encoded) > 0 && len(encoded)%groupCharacters == 0 &&
+		(accumulator != 0 || finalBits-pendingBits <= 25) {
+		return fmt.Errorf("final group: %w", ErrInvalidPadding)
 	}
 
 	return nil

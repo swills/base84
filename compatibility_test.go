@@ -127,22 +127,7 @@ func TestRandomAlterationsRemainStrict(t *testing.T) {
 
 		altered := []byte(Encode(input))
 		character := Alphabet[random.Intn(len(Alphabet))]
-
-		alteration := random.Intn(3)
-		switch alteration {
-		case 0:
-			if len(altered) > 0 {
-				altered[random.Intn(len(altered))] = character
-			}
-		case 1:
-			altered = append(altered, character)
-		case 2:
-			if len(altered) > 0 {
-				altered = altered[:len(altered)-1]
-			}
-		default:
-			t.Fatalf("seed=%d iteration=%d unexpected alteration %d", seed, iteration, alteration)
-		}
+		altered = randomlyAlterEncoding(t, random, altered, character, seed, iteration)
 
 		decoded, err := Decode(string(altered))
 		if err != nil {
@@ -157,6 +142,35 @@ func TestRandomAlterationsRemainStrict(t *testing.T) {
 			t.Fatalf("seed=%d iteration=%d Encode(Decode(%q)) = %q", seed, iteration, altered, reencoded)
 		}
 	}
+}
+
+func randomlyAlterEncoding(
+	t *testing.T,
+	random *rand.Rand,
+	encoded []byte,
+	character byte,
+	seed int64,
+	iteration int,
+) []byte {
+	t.Helper()
+
+	alteration := random.Intn(3)
+	switch alteration {
+	case 0:
+		if len(encoded) > 0 {
+			encoded[random.Intn(len(encoded))] = character
+		}
+	case 1:
+		encoded = append(encoded, character)
+	case 2:
+		if len(encoded) > 0 {
+			encoded = encoded[:len(encoded)-1]
+		}
+	default:
+		t.Fatalf("seed=%d iteration=%d unexpected alteration %d", seed, iteration, alteration)
+	}
+
+	return encoded
 }
 
 func TestThresholdAdjacentFourByteGroups(t *testing.T) {
@@ -196,6 +210,12 @@ func TestThresholdAdjacentFourByteGroups(t *testing.T) {
 }
 
 func TestSizeBoundInvariants(t *testing.T) {
+	t.Run("small bounds", testSmallSizeBounds)
+	t.Run("round trips", testSizeBoundRoundTrips)
+	t.Run("large bounds", testLargeSizeBounds)
+}
+
+func testSmallSizeBounds(t *testing.T) {
 	wantEncoded := [...]int{0, 2, 3, 4, 6, 7}
 	for sourceLength, want := range wantEncoded {
 		if got := encodedSizeUpperBound(sourceLength); got != want {
@@ -209,7 +229,9 @@ func TestSizeBoundInvariants(t *testing.T) {
 			t.Errorf("decodedSizeUpperBound(%d) = %d, want %d", encodedLength, got, want)
 		}
 	}
+}
 
+func testSizeBoundRoundTrips(t *testing.T) {
 	input := bytes.Repeat([]byte{0xff}, 255)
 	for length := 0; length <= len(input); length++ {
 		encoded := Encode(input[:length])
@@ -231,7 +253,9 @@ func TestSizeBoundInvariants(t *testing.T) {
 			)
 		}
 	}
+}
 
+func testLargeSizeBounds(t *testing.T) {
 	maxInt := int(^uint(0) >> 1)
 	if got, want := encodedSizeUpperBound(maxInt/40*31), maxInt/40*40; got != want {
 		t.Errorf("large encoded size bound = %d, want %d", got, want)

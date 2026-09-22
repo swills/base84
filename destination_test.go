@@ -69,24 +69,30 @@ func testDecodeDestinations(t *testing.T, source []byte) {
 
 	for capacity := 0; capacity <= len(decoded)+1; capacity++ {
 		t.Run("decode capacity "+strconv.Itoa(capacity), func(t *testing.T) {
-			destination := make([]byte, capacity)
-			written, err := StdEncoding.Decode(destination, encoded)
-
-			if capacity < len(decoded) {
-				if !errors.Is(err, ErrNoSpaceLeft) {
-					t.Errorf("Decode error = %v, want ErrNoSpaceLeft", err)
-				}
-
-				if written != capacity || !bytes.Equal(destination, decoded[:capacity]) {
-					t.Errorf("Decode = (%d, %x), want (%d, %x)", written, destination, capacity, decoded[:capacity])
-				}
-
-				return
-			}
-
-			if err != nil || written != len(decoded) || !bytes.Equal(destination[:written], decoded) {
-				t.Errorf("Decode = (%d, %x, %v), want (%d, %x, nil)", written, destination[:written], err, len(decoded), decoded)
-			}
+			testDecodeDestination(t, encoded, decoded, capacity)
 		})
+	}
+}
+
+func testDecodeDestination(t *testing.T, encoded, decoded []byte, capacity int) {
+	t.Helper()
+
+	destination := make([]byte, capacity)
+	written, err := StdEncoding.Decode(destination, encoded)
+
+	if capacity < len(decoded) {
+		if !errors.Is(err, ErrNoSpaceLeft) {
+			t.Errorf("Decode error = %v, want ErrNoSpaceLeft", err)
+		}
+
+		if written != capacity || !bytes.Equal(destination, decoded[:capacity]) {
+			t.Errorf("Decode = (%d, %x), want (%d, %x)", written, destination, capacity, decoded[:capacity])
+		}
+
+		return
+	}
+
+	if err != nil || written != len(decoded) || !bytes.Equal(destination[:written], decoded) {
+		t.Errorf("Decode = (%d, %x, %v), want (%d, %x, nil)", written, destination[:written], err, len(decoded), decoded)
 	}
 }

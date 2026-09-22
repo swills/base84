@@ -121,25 +121,39 @@ func parseArguments(args []string, stdout, stderr io.Writer) parseOutcome {
 		return parseOutcome{invocation: versionInvocation, exitCode: 0, ready: true}
 	}
 
-	if values.encode && values.decode {
-		reportUsage(flags, "encode and decode modes cannot be used together")
+	operands := flags.Args()
+
+	validationError := validateArguments(values, len(operands))
+	if validationError != "" {
+		reportUsage(flags, validationError)
 
 		return parseOutcome{invocation: emptyInvocation, exitCode: 2, ready: false}
+	}
+
+	return parseOutcome{
+		invocation: buildInvocation(values, operands),
+		exitCode:   0,
+		ready:      true,
+	}
+}
+
+func validateArguments(values argumentValues, operandCount int) string {
+	if values.encode && values.decode {
+		return "encode and decode modes cannot be used together"
 	}
 
 	if values.wrapWidth < 0 {
-		reportUsage(flags, "wrap width must be nonnegative")
-
-		return parseOutcome{invocation: emptyInvocation, exitCode: 2, ready: false}
+		return "wrap width must be nonnegative"
 	}
 
-	operands := flags.Args()
-	if len(operands) > 2 {
-		reportUsage(flags, "expected at most two operands")
-
-		return parseOutcome{invocation: emptyInvocation, exitCode: 2, ready: false}
+	if operandCount > 2 {
+		return "expected at most two operands"
 	}
 
+	return ""
+}
+
+func buildInvocation(values argumentValues, operands []string) invocation {
 	parsed := invocation{
 		options: cli.Options{
 			Mode:          cli.ModeEncode,
@@ -162,7 +176,7 @@ func parseArguments(args []string, stdout, stderr io.Writer) parseOutcome {
 		parsed.outputPath = operands[1]
 	}
 
-	return parseOutcome{invocation: parsed, exitCode: 0, ready: true}
+	return parsed
 }
 
 func newArgumentFlagSet(values *argumentValues, output io.Writer) *flag.FlagSet {
